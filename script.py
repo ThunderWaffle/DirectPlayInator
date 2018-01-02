@@ -87,14 +87,14 @@ def convert_file(filename, bitrate, video_streams, audio_streams, subtitle_strea
 		new_filename_ext = new_filename + '.mp4'
 		print "Only audio codec conversion required!"
 		print "Writing new file... " + new_filename_ext
-		bash_command(["./ffmpeg.exe", "-y", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "libfdk_aac", "-q:a", "1", new_filename_ext ]).wait()
+		bash_command(["./ffmpeg.exe", "-y", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "libfdk_aac", "-vbr", "4", new_filename_ext ]).wait()
 		
 	# full transcode required
 	elif source_no_subtitles:
 		new_filename_ext = new_filename + '.mp4'
 		print "Full transcode in progress..."
 		print "Writing new file... " + new_filename_ext
-		bash_command(["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M", "-c:a", "libfdk_aac", "-q:a", "1", new_filename_ext ]).wait()		
+		bash_command(["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M", "-c:a", "libfdk_aac", "-vbr", "4", new_filename_ext ]).wait()		
 		
 	#codecs fine but subtitles exist so switching to MKV
 	elif source_is_h264 and source_bitrate_ok and source_all_aac:
@@ -115,28 +115,28 @@ def convert_file(filename, bitrate, video_streams, audio_streams, subtitle_strea
 		new_filename_ext = new_filename + '.mkv'
 		print "Only audio codec conversion required; subtitles found"
 		print "Writing new file... " + new_filename_ext
-		cmd = bash_command(["./ffmpeg.exe", "-y", "-i", filename, "-map", "0", "-c:v", "copy", "-c:a", "libfdk_aac", "-q:a", "1", "-c:s", "srt", new_filename_ext ])
+		cmd = bash_command(["./ffmpeg.exe", "-y", "-i", filename, "-map", "0", "-c:v", "copy", "-c:a", "libfdk_aac", "-vbr", "4", "-c:s", "srt", new_filename_ext ])
 		cmd.wait()
 		# conversion of subtitles FAILED, just remove them and use MP4
 		if cmd.returncode != 0:
 			os.remove(new_filename_ext)
 			print "Subtitle conversion failed (probably image based).  Removing and retrying as MP4"				
 			new_filename_ext = new_filename + '.mp4'
-			bash_command(["./ffmpeg.exe", "-y", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "libfdk_aac", "-q:a", "1", new_filename_ext ]).wait()
+			bash_command(["./ffmpeg.exe", "-y", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "libfdk_aac", "-vbr", "4", new_filename_ext ]).wait()
 		
 	#worst case :(.  full transcode with subtitles thrown in
 	else:
 		new_filename_ext = new_filename + '.mkv'
 		print "Full transcode required; subtitles found"
 		print "Writing new file... " + new_filename_ext
-		cmd = bash_command(["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename, "-map", "0", "-c:v", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M", "-c:a", "libfdk_aac", "-q:a", "1", "-c:s", "srt", new_filename_ext])
+		cmd = bash_command(["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename, "-map", "0", "-c:v", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M", "-c:a", "libfdk_aac", "-vbr", "4", "-c:s", "srt", new_filename_ext])
 		cmd.wait()
 		# conversion of subtitles FAILED, just remove them and use MP4
 		if cmd.returncode != 0:
 			os.remove(new_filename_ext)
 			print "Subtitle conversion failed (probably image based).  Removing and retrying as MP4"
 			new_filename_ext = new_filename + '.mp4'
-			bash_command(["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M", "-c:a", "libfdk_aac", "-q:a", "1", new_filename_ext]).wait()
+			bash_command(["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename, "-map", "0:v", "-map", "0:a", "-c:v", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M", "-c:a", "libfdk_aac", "-vbr", "4", new_filename_ext]).wait()
 			
 	verify_success(filename, new_filename_ext)		
 		
