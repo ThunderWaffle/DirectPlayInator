@@ -23,8 +23,7 @@ def unix_to_win_filename(filename):
 
 	parts = parts[2:] #cut /mnt
 	parts[0] = parts[0] + ':\\'
-	
-	
+
 	return ntpath.join(*parts)
 
 	
@@ -33,11 +32,14 @@ def parse_codecs(filename):
 	win_filename = unix_to_win_filename(filename)
 	bash_command(["./ffprobe.exe", "-v", "quiet", "-of", "json", "-show_streams", "-show_format", win_filename]).wait()
 
+	#TODO handle bad load
 	with open('output.txt') as f:
 		json_data = json.load(f)
 	
 	container_streams = []
 	
+	if 'streams' not in json_data:
+		return False
 	streams = json_data['streams']
 	
 	
@@ -65,7 +67,39 @@ def parse_codecs(filename):
 	
 	return container_structure
 	
+def check_results(old_file_structure, desired_streams, new_filename):
+	
+	if not os.path.isfile(new_filename):
+		return False
+	
+	new_file_structure = parse_codecs(new_filename)
+	if new_file_structure == False:
+		return False
+	
+	video_streams = 0
+	audio_streams = 0
+	
+	streams = new_file_structure['streams']
+	pprint(streams)
+	for stream in streams:
+		if stream['type'] == 'video':
+			video_streams += 1
+		elif stream['type'] == 'audio':
+			audio_streams += 1
 
+	if (video_streams + audio_streams) != desired_streams:
+		return False
+
+	old_duration = float(old_file_structure['length'])
+	new_duration = float(new_file_structure['length'])
+	
+	if abs(old_duration - new_duration) > 5:
+		return False
+		
+	return True
+	
+	
+	
 def convert_av(filename, container_structure):
 	
 	filename_no_ext, file_ext = os.path.splitext(filename)
@@ -89,7 +123,6 @@ def convert_av(filename, container_structure):
 	
 	waits = []
 	
-	#build up video and audio right now only!
 	for i in range(len(container_structure['streams'])):
 		stream = container_structure['streams'][i]
 		if stream['default'] == 0 and stream['forced'] == 0:
@@ -167,6 +200,8 @@ def convert_av(filename, container_structure):
 	except:
 		pass
 		
+	return check_results(container_structure, len(input_args) // 2, new_filename)
+		
 		
 def convert_subtitles(filename, container_structure):
 	
@@ -238,12 +273,28 @@ def convert_subtitles(filename, container_structure):
 			except:
 				pass
 			
-			
+def mark_success(filename):
+	with open('successful.txt', 'a') as f:
+		f.write(filename)
+		
+def mark_failure(filename):
+	with open('failed.txt', 'a') as f:
+		f.write(filename)
+
+
 with open('files_to_convert.txt', 'r') as f:
 	content = f.readlines()
 	for line in content:
 		file_to_convert = line.rstrip("\r\n")
-		parse_codecs(file_to_convert)
 		container_struct = parse_codecs(file_to_convert)
-		convert_av(file_to_convert, container_struct)
+
+		if container_struct == False:
+			mark_failure(file_to_convert)
+			continue
+		
+		if convert_av(file_to_convert, container_struct) == False:
+			mark_failure(file_to_convert)
+			continue
+			
 		convert_subtitles(file_to_convert, container_struct)
+		mark_success(file_to_convert)
