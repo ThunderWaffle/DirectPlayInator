@@ -34,7 +34,10 @@ def parse_codecs(filename):
 
 	#TODO handle bad load
 	with open('output.txt') as f:
-		json_data = json.load(f)
+		try:
+			json_data = json.load(f)
+		except:
+			return False
 	
 	container_streams = []
 	
