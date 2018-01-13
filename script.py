@@ -5,9 +5,9 @@ import os
 import os.path
 from pprint import pprint
 
-def bash_command(cmd):
-    with open('output.txt', 'w+') as f:
-        return subprocess.Popen(cmd, stdout=f, stderr=f)
+def bash_command(cmd, filename='output.txt'):
+	with open(filename, 'w+') as f:
+		return subprocess.Popen(cmd, stdout=f, stderr=f)
 		
 def get_filename_no_ext(filename):
 	filename_parts = re.split("\.", filename)[:-1]
@@ -59,13 +59,10 @@ def convert_file(filename, container_structure):
 	video_stream_index = -1
 	audio_stream_index = -1
 	
-	preamble_args = []
 	input_args = []
 	map_args = []
-	video_args = []
-	audio_args = []
 	
-	input_args.extend(["-i", filename])
+	waits = []
 	
 	#build up video and audio right now only!
 	for i in range(len(container_structure['streams'])):
@@ -77,13 +74,22 @@ def convert_file(filename, container_structure):
 			video_stream_index = i
 			
 			map_str = "0:" + str(i)
-			map_args.extend(["-map", map_str])	
+			video_command = []
 			
 			if int(container_structure['bitrate']) > 7500000 or stream['codec'] != 'h264':
-				preamble_args.extend(["-hwaccel", "cuvid"])
-				video_args.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M"])
+				video_command = ["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename]
+				video_command.extend(["-map", map_str])
+				video_command.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M"])
 			else:
+				video_command = ["./ffmpeg.exe", "-y", "-i", filename]
+				video_command.extend(["-map", map_str])
 				video_args.extend(["-c:v:0", "copy"])
+				
+			video_command.extend(["video.mp4"])
+			waits.append(bash_command(video_command, 'video_output.txt'))
+			
+			input_args.extend(["-i", "video.mp4"])
+			map_args.extend(["-map", "0:0"])
 				
 		
 		if stream['type'] == 'audio' and audio_stream_index == -1:
@@ -91,43 +97,46 @@ def convert_file(filename, container_structure):
 			
 			map_str = "0:" + str(i)
 			
+			input_args.extend(["-i", "2channel.mp4"])
+			map_args.extend(["-map", "1:0"])
+			
 			#leave audio alone if its stereo AAC
 			if stream['channels'] <= 2 and stream['codec'] == 'aac':
-				map_args.extend(["-map", map_str])			
-				audio_args.extend(["-c:a:0", "copy"])
+				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "copy", "2channel.mp4"]
+				waits.append(bash_command(surround_command, '2channel_output.txt'))
 				
 			elif stream['channels'] <= 5:
-				map_args.extend(["-map", map_str])
-				audio_args.extend(["-c:a:0", "aac", "-ac", "2"])
+				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
+				waits.append(bash_command(stereo_command, '2channel_output.txt'))
 				
 			else:
-				#ugh we have to make separate files and recombine them later.
 				surround_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "6", "6channel.mp4"]
-				bash_command(surround_command).wait()
+				waits.append(bash_command(surround_command, '6channel_output.txt'))
 				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
-				bash_command(stereo_command).wait()
+				waits.append(bash_command(stereo_command, '2channel_output.txt'))
 				
-				input_args.extend(["-i", "2channel.mp4"])
+				#add 6 channel track
 				input_args.extend(["-i", "6channel.mp4"])
-				
-				map_args.extend(["-map", "1:0"])
 				map_args.extend(["-map", "2:0"])
 				
-				audio_args.extend(["-c:a:0", "copy"])
-				audio_args.extend(["-c:a:1", "copy"])
-				
-				
+	video_args.extend(["-codec", "copy"])			
 	print("Writing new file... " + new_filename)
 	
-	full_command = ["./ffmpeg.exe", "-y"]
-	full_command.extend(preamble_args)
-	full_command.extend(input_args)	
-	full_command.extend(map_args)
-	full_command.extend(video_args)
-	full_command.extend(audio_args)
-	full_command.append(new_filename)
-	print(full_command)
-	bash_command(full_command).wait()
+	pprint(waits)
+	for active_process in waits:
+		print("hello")
+		active_process.wait()
+	
+	if audio_stream_index > -1 and video_stream_index > -1:
+		full_command = ["./ffmpeg.exe", "-y"]
+		full_command.extend(input_args)	
+		full_command.extend(map_args)
+		full_command.extend(["-codec", "copy"])	
+		full_command.append(new_filename)
+		print(full_command)
+		bash_command(full_command).wait()
+	
+	os.remove("video.mp4")	
 	os.remove("2channel.mp4")
 	os.remove("6channel.mp4")
 	
