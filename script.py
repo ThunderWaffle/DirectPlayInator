@@ -117,7 +117,7 @@ def convert_file(filename, container_structure):
 				audio_args.extend(["-c:a:1", "copy"])
 				
 				
-	print "Writing new file... " + new_filename
+	print("Writing new file... " + new_filename)
 	
 	full_command = ["./ffmpeg.exe", "-y"]
 	full_command.extend(preamble_args)
@@ -126,7 +126,7 @@ def convert_file(filename, container_structure):
 	full_command.extend(video_args)
 	full_command.extend(audio_args)
 	full_command.append(new_filename)
-	print full_command
+	print(full_command)
 	bash_command(full_command).wait()
 	os.remove("2channel.mp4")
 	os.remove("6channel.mp4")
