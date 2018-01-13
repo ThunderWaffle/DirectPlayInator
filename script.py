@@ -119,12 +119,9 @@ def convert_file(filename, container_structure):
 				input_args.extend(["-i", "6channel.mp4"])
 				map_args.extend(["-map", "2:0"])
 				
-	video_args.extend(["-codec", "copy"])			
 	print("Writing new file... " + new_filename)
 	
-	pprint(waits)
 	for active_process in waits:
-		print("hello")
 		active_process.wait()
 	
 	if audio_stream_index > -1 and video_stream_index > -1:
@@ -135,6 +132,8 @@ def convert_file(filename, container_structure):
 		full_command.append(new_filename)
 		print(full_command)
 		bash_command(full_command).wait()
+	
+	print("Conversion Complete!... " + new_filename)
 	
 	os.remove("video.mp4")	
 	os.remove("2channel.mp4")
