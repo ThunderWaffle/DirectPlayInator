@@ -2,19 +2,36 @@ import subprocess
 import json
 import re
 import os
-import os.path
+import ntpath
 from pprint import pprint
 
 def bash_command(cmd, filename='output.txt'):
 	with open(filename, 'w+') as f:
 		return subprocess.Popen(cmd, stdout=f, stderr=f)
 		
-def get_filename_no_ext(filename):
-	filename_parts = re.split("\.", filename)[:-1]
-	return '.'.join(filename_parts)
+def unix_to_win_filename(filename):
+	parts = []
+	remaining_name = os.path.abspath(filename)
+	while True:
+		new_parts = os.path.split(remaining_name)
+		if new_parts[0] == remaining_name:
+			parts.insert(0, new_parts[0])
+			break
+		else:
+			remaining_name = new_parts[0]
+			parts.insert(0, new_parts[1])
+
+	parts = parts[2:] #cut /mnt
+	parts[0] = parts[0] + ':\\'
+	
+	
+	return ntpath.join(*parts)
+
+	
 
 def parse_codecs(filename):
-	bash_command(["./ffprobe.exe", "-v", "quiet", "-of", "json", "-show_streams", "-show_format", filename]).wait()
+	win_filename = unix_to_win_filename(filename)
+	bash_command(["./ffprobe.exe", "-v", "quiet", "-of", "json", "-show_streams", "-show_format", win_filename]).wait()
 
 	with open('output.txt') as f:
 		json_data = json.load(f)
@@ -49,10 +66,18 @@ def parse_codecs(filename):
 	return container_structure
 	
 
-def convert_file(filename, container_structure):
+def convert_av(filename, container_structure):
 	
-	filename_no_ext = get_filename_no_ext(filename)
+	filename_no_ext, file_ext = os.path.splitext(filename)
 	new_filename = filename_no_ext + "-new.mp4"
+	
+	try:
+		os.remove(new_filename)
+	except:
+		pass
+	
+	win_filename = unix_to_win_filename(filename)
+	new_win_filename = unix_to_win_filename(new_filename)
 	
 	i = 0
 	
@@ -77,20 +102,20 @@ def convert_file(filename, container_structure):
 			video_command = []
 			
 			if int(container_structure['bitrate']) > 7500000 or stream['codec'] != 'h264':
-				video_command = ["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename]
+				video_command = ["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", win_filename]
 				video_command.extend(["-map", map_str])
 				video_command.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M"])
 			else:
-				video_command = ["./ffmpeg.exe", "-y", "-i", filename]
+				video_command = ["./ffmpeg.exe", "-y", "-i", win_filename]
 				video_command.extend(["-map", map_str])
-				video_args.extend(["-c:v:0", "copy"])
+				video_command.extend(["-c:v:0", "copy"])
 				
 			video_command.extend(["video.mp4"])
 			waits.append(bash_command(video_command, 'video_output.txt'))
 			
 			input_args.extend(["-i", "video.mp4"])
 			map_args.extend(["-map", "0:0"])
-				
+			
 		
 		if stream['type'] == 'audio' and audio_stream_index == -1:
 			audio_stream_index = i
@@ -102,17 +127,17 @@ def convert_file(filename, container_structure):
 			
 			#leave audio alone if its stereo AAC
 			if stream['channels'] <= 2 and stream['codec'] == 'aac':
-				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "copy", "2channel.mp4"]
-				waits.append(bash_command(surround_command, '2channel_output.txt'))
+				stereo_command = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:a:0", "copy", "2channel.mp4"]
+				waits.append(bash_command(stereo_command, '2channel_output.txt'))
 				
 			elif stream['channels'] <= 5:
-				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
+				stereo_command = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
 				waits.append(bash_command(stereo_command, '2channel_output.txt'))
 				
 			else:
-				surround_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "6", "6channel.mp4"]
+				surround_command = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "6", "6channel.mp4"]
 				waits.append(bash_command(surround_command, '6channel_output.txt'))
-				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
+				stereo_command = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
 				waits.append(bash_command(stereo_command, '2channel_output.txt'))
 				
 				#add 6 channel track
@@ -129,23 +154,96 @@ def convert_file(filename, container_structure):
 		full_command.extend(input_args)	
 		full_command.extend(map_args)
 		full_command.extend(["-codec", "copy"])	
-		full_command.append(new_filename)
+		full_command.append(new_win_filename)
 		print(full_command)
 		bash_command(full_command).wait()
 	
 	print("Conversion Complete!... " + new_filename)
 	
-	os.remove("video.mp4")	
-	os.remove("2channel.mp4")
-	os.remove("6channel.mp4")
+	try:
+		os.remove("video.mp4")	
+		os.remove("2channel.mp4")
+		os.remove("6channel.mp4")
+	except:
+		pass
+		
+		
+def convert_subtitles(filename, container_structure):
 	
-	#TODO external subtitles...
-
+	win_filename = unix_to_win_filename(filename)
+	filename_no_ext, file_ext = os.path.splitext(filename)
 	
+	non_forced_index = -1
+	non_forced_und_index = -1
+	forced_index = -1
+	forced_und_index = -1
+	
+	for i in range(len(container_structure['streams'])):
+		stream = container_structure['streams'][i]
+		
+		if stream['type'] == 'subtitle':
+			if stream['language'] == 'en' or stream['language'] == 'eng':
+				if stream['forced'] == 1 and forced_index == -1:
+					forced_index = i
+				elif non_forced_index == -1:
+					non_forced_index = i
+					
+			elif stream['language'] == 'und':
+				if stream['forced'] == 1 and forced_und_index == -1:
+					forced_und_index = i
+				elif non_forced_und_index == -1:
+					non_forced_und_index = i
+			
+	if non_forced_index != -1:
+		map_str = "s:0:" + str(non_forced_index)
+		new_filename = filename_no_ext + '.eng.srt'
+		new_win_filename = unix_to_win_filename(new_filename)
+		command_line = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:s:0", "srt", new_win_filename]
+		if bash_command(command_line).wait() != 0:
+			try:
+				os.remove(new_filename)
+			except:
+				pass
+		
+	if forced_index != -1:
+		map_str = "s:0:" + str(forced_index)
+		new_filename = filename_no_ext + '.eng.forced.srt'
+		new_win_filename = unix_to_win_filename(new_filename)
+		command_line = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:s:0", "srt", new_win_filename]
+		if bash_command(command_line).wait() != 0:
+			try:
+				os.remove(new_filename)
+			except:
+				pass
+		
+	if non_forced_und_index != -1:
+		map_str = "s:0:" + str(non_forced_und_index)
+		new_filename = filename_no_ext + '.und.srt'
+		new_win_filename = unix_to_win_filename(new_filename)
+		command_line = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:s:0", "srt", new_win_filename]
+		if bash_command(command_line).wait() != 0:
+			try:
+				os.remove(new_filename)
+			except:
+				pass
+		
+	if forced_und_index != -1:
+		map_str = "s:0:" + str(forced_und_index)
+		new_filename = filename_no_ext + '.und.forced.srt'
+		new_win_filename = unix_to_win_filename(new_filename)
+		command_line = ["./ffmpeg.exe", "-y", "-i", win_filename, "-map", map_str, "-c:s:0", "srt", new_win_filename]
+		if bash_command(command_line).wait() != 0:
+			try:
+				os.remove(new_filename)
+			except:
+				pass
+			
+			
 with open('files_to_convert.txt', 'r') as f:
 	content = f.readlines()
 	for line in content:
 		file_to_convert = line.rstrip("\r\n")
 		parse_codecs(file_to_convert)
 		container_struct = parse_codecs(file_to_convert)
-		convert_file(file_to_convert, container_struct)
+		convert_av(file_to_convert, container_struct)
+		convert_subtitles(file_to_convert, container_struct)
