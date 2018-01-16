@@ -190,7 +190,7 @@ def convert_av(filename, container_structure):
 		full_command.extend(input_args)	
 		full_command.extend(map_args)
 		full_command.extend(["-codec", "copy"])	
-		full_command.append(new_win_filename)
+		full_command.append(new_filename)
 		print(full_command)
 		bash_command(full_command).wait()
 	
