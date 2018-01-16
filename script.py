@@ -84,7 +84,7 @@ def check_results(old_file_structure, desired_streams, new_filename):
 	audio_streams = 0
 	
 	streams = new_file_structure['streams']
-	pprint(streams)
+	#pprint(streams)
 	for stream in streams:
 		if stream['type'] == 'video':
 			video_streams += 1
@@ -280,6 +280,10 @@ def convert_subtitles(filename, container_structure):
 				pass
 			
 def mark_success(filename):
+	try:
+		os.remove(filename)
+	except:
+		print("File Conversion Success but original file failed to delete.  Marking as success anyways.")
 	with open('successful.txt', 'a') as f:
 		f.write(filename)
 		
@@ -291,7 +295,6 @@ if len(sys.argv) >= 2:
 	with open('files_to_convert.txt', 'w') as f:
 		for root, dirs, files in os.walk(os.path.abspath(sys.argv[1])):
 				for file in files:
-					print(str(os.path.join(root, file)) + '\n')
 					f.write(str(os.path.join(root, file)) + '\n')
 		
 with open('files_to_convert.txt', 'r') as f:
