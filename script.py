@@ -5,6 +5,7 @@ import os
 import ntpath
 from pprint import pprint
 import sys
+import shutil
 
 def bash_command(cmd, filename='output.txt'):
 	with open(filename, 'w+') as f:
@@ -190,14 +191,16 @@ def convert_av(filename, container_structure):
 		full_command.extend(input_args)	
 		full_command.extend(map_args)
 		full_command.extend(["-codec", "copy"])	
-		full_command.append(new_filename)
+		full_command.append("final-video.mp4")
 		print(full_command)
 		bash_command(full_command).wait()
 	
 	print("Conversion Complete!... " + new_filename)
+	shutil.copy("final-video.mp4", new_filename)
 	
 	try:
 		os.remove("video.mp4")	
+		os.remove("final-video.mp4")
 		os.remove("2channel.mp4")
 		os.remove("6channel.mp4")
 	except:
