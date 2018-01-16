@@ -4,6 +4,7 @@ import re
 import os
 import ntpath
 from pprint import pprint
+import sys
 
 def bash_command(cmd, filename='output.txt'):
 	with open(filename, 'w+') as f:
@@ -32,7 +33,6 @@ def parse_codecs(filename):
 	win_filename = unix_to_win_filename(filename)
 	bash_command(["./ffprobe.exe", "-v", "quiet", "-of", "json", "-show_streams", "-show_format", win_filename]).wait()
 
-	#TODO handle bad load
 	with open('output.txt') as f:
 		try:
 			json_data = json.load(f)
@@ -285,6 +285,11 @@ def mark_failure(filename):
 		f.write(filename)
 
 
+if len(sys.argv) >= 2:
+	full_dir = os.path.abspath(sys.argv[1])
+	cmd_to_use = ['/usr/bin/find', full_dir, '-type', 'f']
+	bash_command(cmd_to_use, "files_to_convert.txt").wait()
+		
 with open('files_to_convert.txt', 'r') as f:
 	content = f.readlines()
 	for line in content:
