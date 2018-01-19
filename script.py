@@ -127,12 +127,20 @@ def convert_av(filename, container_structure):
 	
 	waits = []
 	
+	video_no_defaults = True
+	audio_no_defaults = True
+	
 	for i in range(len(container_structure['streams'])):
 		stream = container_structure['streams'][i]
-		if stream['default'] == 0 and stream['forced'] == 0:
-			continue
+		if stream['type'] == 'video' and stream['default'] == 1:
+			video_no_defaults = False
+		if stream['type'] == 'audio' and stream['default'] == 1:
+			audio_no_defaults = False
+	
+	for i in range(len(container_structure['streams'])):
+		stream = container_structure['streams'][i]
 			
-		if stream['type'] == 'video' and video_stream_index == -1:
+		if stream['type'] == 'video' and video_stream_index == -1 and (video_no_defaults or stream['default'] == 1):
 			video_stream_index = i
 			
 			map_str = "0:" + str(i)
@@ -154,7 +162,7 @@ def convert_av(filename, container_structure):
 			map_args.extend(["-map", "0:0"])
 			
 		
-		if stream['type'] == 'audio' and audio_stream_index == -1:
+		if stream['type'] == 'audio' and audio_stream_index == -1 and (audio_no_defaults or stream['default'] == 1):
 			audio_stream_index = i
 			
 			map_str = "0:" + str(i)
@@ -194,12 +202,11 @@ def convert_av(filename, container_structure):
 		full_command.append("final-video.mp4")
 		print(full_command)
 		bash_command(full_command).wait()
-	
-	print("Conversion Complete!... " + new_filename)
-	shutil.copy("final-video.mp4", new_filename)
+		print("Conversion Complete!... " + new_filename)
+		shutil.copy("final-video.mp4", new_filename)
 	
 	try:
-		os.remove("video.mp4")	
+		os.remove("video.mp4")
 		os.remove("final-video.mp4")
 		os.remove("2channel.mp4")
 		os.remove("6channel.mp4")
