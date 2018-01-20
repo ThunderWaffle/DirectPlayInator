@@ -244,7 +244,7 @@ def convert_subtitles(filename, container_structure):
 			
 	if non_forced_index != -1:
 		map_str = "s:0:" + str(non_forced_index)
-		new_filename = filename_no_ext + '.eng.srt'
+		new_filename = filename_no_ext + '-new.eng.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
@@ -255,7 +255,7 @@ def convert_subtitles(filename, container_structure):
 		
 	if forced_index != -1:
 		map_str = "s:0:" + str(forced_index)
-		new_filename = filename_no_ext + '.eng.forced.srt'
+		new_filename = filename_no_ext + '-new.eng.forced.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
@@ -266,7 +266,7 @@ def convert_subtitles(filename, container_structure):
 		
 	if non_forced_und_index != -1:
 		map_str = "s:0:" + str(non_forced_und_index)
-		new_filename = filename_no_ext + '.und.srt'
+		new_filename = filename_no_ext + '-new.und.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
@@ -277,7 +277,7 @@ def convert_subtitles(filename, container_structure):
 		
 	if forced_und_index != -1:
 		map_str = "s:0:" + str(forced_und_index)
-		new_filename = filename_no_ext + '.und.forced.srt'
+		new_filename = filename_no_ext + '-new.und.forced.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
