@@ -107,7 +107,7 @@ def check_results(old_file_structure, desired_streams, new_filename):
 def convert_av(filename, container_structure):
 	
 	filename_no_ext, file_ext = os.path.splitext(filename)
-	new_filename = filename_no_ext + "-new.mp4"
+	new_filename = filename_no_ext + "-newdirectplay.mp4"
 	
 	try:
 		os.remove(new_filename)
@@ -244,7 +244,7 @@ def convert_subtitles(filename, container_structure):
 			
 	if non_forced_index != -1:
 		map_str = "s:0:" + str(non_forced_index)
-		new_filename = filename_no_ext + '-new.eng.srt'
+		new_filename = filename_no_ext + '-newdirectplay.eng.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
@@ -255,7 +255,7 @@ def convert_subtitles(filename, container_structure):
 		
 	if forced_index != -1:
 		map_str = "s:0:" + str(forced_index)
-		new_filename = filename_no_ext + '-new.eng.forced.srt'
+		new_filename = filename_no_ext + '-newdirectplay.eng.forced.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
@@ -266,7 +266,7 @@ def convert_subtitles(filename, container_structure):
 		
 	if non_forced_und_index != -1:
 		map_str = "s:0:" + str(non_forced_und_index)
-		new_filename = filename_no_ext + '-new.und.srt'
+		new_filename = filename_no_ext + '-newdirectplay.und.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
@@ -277,7 +277,7 @@ def convert_subtitles(filename, container_structure):
 		
 	if forced_und_index != -1:
 		map_str = "s:0:" + str(forced_und_index)
-		new_filename = filename_no_ext + '-new.und.forced.srt'
+		new_filename = filename_no_ext + '-newdirectplay.und.forced.srt'
 		#new_win_filename = unix_to_win_filename(new_filename)
 		command_line = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:s:0", "srt", new_filename]
 		if bash_command(command_line).wait() != 0:
@@ -312,6 +312,11 @@ with open('files_to_convert.txt', 'r') as f:
 
 		if container_struct == False:
 			mark_failure(file_to_convert)
+			continue
+			
+		filename_no_ext, file_ext = os.path.splitext(file_to_convert)
+		if filename_no_ext.endswith("-newdirectplay"):
+			print("We already converted this one!  Skipping...")
 			continue
 		
 		if convert_av(file_to_convert, container_struct) == False:
