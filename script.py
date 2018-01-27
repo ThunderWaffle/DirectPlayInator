@@ -2,6 +2,7 @@ import subprocess
 import json
 import re
 import os
+import io
 import ntpath
 from pprint import pprint
 import sys
@@ -299,12 +300,12 @@ def mark_failure(filename):
 		f.write(filename)
 		
 if len(sys.argv) >= 2:
-	with open('files_to_convert.txt', 'w') as f:
+	with io.open('files_to_convert.txt', 'w', encoding='utf8') as f:
 		for root, dirs, files in os.walk(os.path.abspath(sys.argv[1])):
 				for file in files:
-					f.write(str(os.path.join(root, file)) + '\n')
+					f.write(os.path.join(root, file) + '\n')
 		
-with open('files_to_convert.txt', 'r') as f:
+with io.open('files_to_convert.txt', 'r', encoding='utf8') as f:
 	content = f.readlines()
 	for line in content:
 		file_to_convert = line.rstrip("\r\n")
