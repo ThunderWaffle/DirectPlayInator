@@ -171,16 +171,24 @@ def convert_av(filename, container_structure):
 			input_args.extend(["-i", "2channel.mp4"])
 			map_args.extend(["-map", "1:0"])
 			
+			needs_normalization = 0
+			
 			#leave audio alone if its stereo AAC
 			if stream['channels'] <= 2 and stream['codec'] == 'aac':
 				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "copy", "2channel.mp4"]
 				waits.append(bash_command(stereo_command, '2channel_output.txt'))
 				
+			elif stream['channels'] <= 2:
+				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "2channel.mp4"]
+				waits.append(bash_command(stereo_command, '2channel_output.txt'))
+				
 			elif stream['channels'] <= 5:
+				needs_normalization = 1
 				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
 				waits.append(bash_command(stereo_command, '2channel_output.txt'))
 				
 			else:
+				needs_normalization = 1
 				surround_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "6", "6channel.mp4"]
 				waits.append(bash_command(surround_command, '6channel_output.txt'))
 				stereo_command = ["./ffmpeg.exe", "-y", "-i", filename, "-map", map_str, "-c:a:0", "libfdk_aac", "-ac", "2", "2channel.mp4"]
@@ -194,6 +202,10 @@ def convert_av(filename, container_structure):
 	
 	for active_process in waits:
 		active_process.wait()
+		
+	#normalize 2 channel track
+	if needs_normalization == 1:
+		bash_command(["ffmpeg-normalize.exe", "2channel.mp4", "-v", "-lrt", "10.0", "-c:a", "libfdk_aac", "-o", "2channel.mp4", "-f"], 'normalize.txt').wait()
 	
 	if audio_stream_index > -1 and video_stream_index > -1:
 		full_command = ["./ffmpeg.exe", "-y"]
@@ -204,7 +216,11 @@ def convert_av(filename, container_structure):
 		print(full_command)
 		bash_command(full_command).wait()
 		print("Conversion Complete!... " + new_filename)
-		shutil.copy("final-video.mp4", new_filename)
+
+		try:
+			shutil.copy("final-video.mp4", new_filename)
+		except:
+			pass
 	
 	try:
 		os.remove("video.mp4")
