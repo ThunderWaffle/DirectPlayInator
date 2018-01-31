@@ -228,7 +228,8 @@ def convert_av(filename, container_structure):
 		print("Conversion Complete!... " + new_filename)
 
 		try:
-			shutil.copy("final-video.mp4", new_filename)
+			#shutil.copy("final-video.mp4", new_filename)
+			bash_command(["xcopy", "final-video.mp4", new_filename + "*"], 'copy.txt').wait()
 		except:
 			pass
 	
