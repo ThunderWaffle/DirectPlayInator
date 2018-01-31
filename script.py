@@ -8,6 +8,15 @@ from pprint import pprint
 import sys
 import shutil
 
+def _copyfileobj_patched(fsrc, fdst, length=16*1024*1024):
+    """Patches shutil method to hugely improve copy speed"""
+    while 1:
+        buf = fsrc.read(length)
+        if not buf:
+            break
+        fdst.write(buf)
+shutil.copyfileobj = _copyfileobj_patched
+
 def bash_command(cmd, filename='output.txt'):
 	with open(filename, 'w+') as f:
 		return subprocess.Popen(cmd, stdout=f, stderr=f)
@@ -205,6 +214,7 @@ def convert_av(filename, container_structure):
 		
 	#normalize 2 channel track
 	if needs_normalization == 1:
+		print("Preforming a normalization...")
 		bash_command(["ffmpeg-normalize.exe", "2channel.mp4", "-v", "-lrt", "10.0", "-c:a", "libfdk_aac", "-o", "2channel.mp4", "-f"], 'normalize.txt').wait()
 	
 	if audio_stream_index > -1 and video_stream_index > -1:
