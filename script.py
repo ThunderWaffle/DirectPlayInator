@@ -157,9 +157,9 @@ def convert_av(filename, container_structure):
 			video_command = []
 			
 			if int(container_structure['bitrate']) > 7500000 or stream['codec'] != 'h264':
-				video_command = ["./ffmpeg.exe", "-y", "-hwaccel", "cuvid", "-i", filename]
+				video_command = ["./ffmpeg.exe", "-y", "-i", filename]
 				video_command.extend(["-map", map_str])
-				video_command.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-pixel_format", "yuv444p", "-profile:v", "high", "-b:v", "7M"])
+				video_command.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-pix_fmt", "yuv444p", "-profile:v", "high", "-b:v", "7M"])
 			else:
 				video_command = ["./ffmpeg.exe", "-y", "-i", filename]
 				video_command.extend(["-map", map_str])
