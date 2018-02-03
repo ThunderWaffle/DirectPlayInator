@@ -8,6 +8,8 @@ from pprint import pprint
 import sys
 import shutil
 
+supported_pixel_formats = ['yuv420p', 'nv12', 'p010le', 'yuv444p', 'yuv444p16le', 'bgr0', 'rgb0', 'cuda']
+
 def _copyfileobj_patched(fsrc, fdst, length=16*1024*1024):
     """Patches shutil method to hugely improve copy speed"""
     while 1:
@@ -65,6 +67,8 @@ def parse_codecs(filename):
 		disposition = stream['disposition']
 		stream_struct['default'] = disposition['default']
 		stream_struct['forced'] = disposition['forced']
+		if 'pix_fmt' in stream:
+			stream_struct['pixel'] = stream['pix_fmt']
 		if stream_struct['type'] == 'audio':
 			stream_struct['channels'] = stream['channels']
 		if 'tags' in stream:
@@ -159,7 +163,10 @@ def convert_av(filename, container_structure):
 			if int(container_structure['bitrate']) > 7500000 or stream['codec'] != 'h264':
 				video_command = ["./ffmpeg.exe", "-y", "-i", filename]
 				video_command.extend(["-map", map_str])
-				video_command.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-pix_fmt", "yuv444p", "-profile:v", "high", "-b:v", "7M"])
+				if stream['pixel'] in supported_pixel_formats:
+					video_command.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-profile:v", "high", "-b:v", "7M"])
+				else:
+					video_command.extend(["-c:v:0", "h264_nvenc", "-preset", "slow", "-pix_fmt", "yuv444p", "-profile:v", "high", "-b:v", "7M"])
 			else:
 				video_command = ["./ffmpeg.exe", "-y", "-i", filename]
 				video_command.extend(["-map", map_str])
