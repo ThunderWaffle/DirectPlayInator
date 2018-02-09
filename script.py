@@ -222,7 +222,7 @@ def convert_av(filename, container_structure):
 	#normalize 2 channel track
 	if needs_normalization == 1:
 		print("Preforming a normalization...")
-		bash_command(["ffmpeg-normalize.exe", "2channel.mp4", "-v", "-lrt", "10.0", "-c:a", "libfdk_aac", "-o", "2channel.mp4", "-f"], 'normalize.txt').wait()
+		bash_command(["ffmpeg-normalize.exe", "2channel.mp4", "-v", "-lrt", "13.0", "-c:a", "libfdk_aac", "-o", "2channel.mp4", "-f"], 'normalize.txt').wait()
 	
 	if audio_stream_index > -1 and video_stream_index > -1:
 		full_command = ["./ffmpeg.exe", "-y"]
