@@ -46,7 +46,7 @@ def parse_codecs(filename):
 	#win_filename = unix_to_win_filename(filename)
 	bash_command(["./ffprobe.exe", "-v", "quiet", "-of", "json", "-show_streams", "-show_format", filename]).wait()
 
-	with open('output.txt') as f:
+	with io.open('output.txt', 'r', encoding='utf8') as f:
 		try:
 			json_data = json.load(f)
 		except:
